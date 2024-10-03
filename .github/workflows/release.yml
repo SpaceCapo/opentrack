@@ -102,8 +102,13 @@ jobs:
       if: matrix.os == 'windows-latest'
 
 
-    - name: remove 'latest' from matrix.os
+    - name: remove 'latest' from matrix.os for linux and mac
       run: echo "RELEASE_OS_NAME=${{ matrix.os }}" | cut -d'-' -f1 >> "$GITHUB_ENV"
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+    
+    - name: remove 'latest' from matrix.os for windows
+      run: echo "RELEASE_OS_NAME=${{ matrix.os }}" | ForEach-Object { $_.split("-")[0] }>> "$GITHUB_ENV"
+      if: matrix.os == 'windows-latest'
 
     - name: upload linux or mac artifact
       uses: actions/upload-release-asset@v1
