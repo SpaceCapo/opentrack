@@ -1,8 +1,9 @@
 name: CMake
 
 on:
-  - pull_request
-  - workflow_dispatch
+  release:
+    types: 
+      - created
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -87,8 +88,36 @@ jobs:
     - name: Build
       run: ${{matrix.cmake}} --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
 
-    - name: Upload build
-      uses: actions/upload-artifact@v4
+    - name: Create linux and mac tarball
+      run: |
+        cd ${{github.workspace}}/build/install
+        tar -czf opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz .
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+
+    - name: Create windows zip file
+      run: |
+        cd ${{github.workspace}}/build/install
+        7z a -tzip opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip .
+      if: matrix.os == 'windows-latest'
+
+    - name: upload linux or mac artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       with:
-        name: buildoutput-${{matrix.os}}-${{env.BUILD_TYPE}}
-        path: ${{github.workspace}}/build/install/
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
+        asset_content_type: application/gzip
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+
+    - name: upload windows artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
+        asset_content_type: application/zip
+      if: matrix.os == 'windows-latest'
