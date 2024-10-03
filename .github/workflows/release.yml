@@ -91,7 +91,8 @@ jobs:
     - name: Create linux and mac tarball
       run: |
         cd ${{github.workspace}}/build/install
-        tar -czf opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz .
+        tar -czf /tmp/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz .
+        cp /tmp/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
       if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
 
     - name: Create windows zip file
@@ -107,7 +108,7 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
-        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ github.event.release.tag_name }}.tar.gz
         asset_content_type: application/gzip
       if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
 
@@ -118,6 +119,6 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
-        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ github.event.release.tag_name }}.tar.gz
         asset_content_type: application/zip
       if: matrix.os == 'windows-latest'
