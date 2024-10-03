@@ -1,0 +1,123 @@
+name: CMake
+
+on:
+  release:
+    types: 
+      - created
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+        - os: macos-latest
+          cmake: cmake
+        - os: ubuntu-latest
+          cmake: cmake
+        - os: windows-latest
+          cmake: .\.github\workflows\build-windows.bat cmake
+
+    steps:
+    - name: clone opentrack/opentrack
+      uses: actions/checkout@v2
+
+    - name: clone opentrack/depends
+      uses: actions/checkout@v2
+      with:
+        repository: opentrack/opentrack-depends
+        submodules: true
+        path: opentrack-depends
+
+    - name: setup nuget 
+      uses: nuget/setup-nuget@v2
+      with:
+        nuget-version: 'latest'
+      if: matrix.os == 'windows-latest'
+
+    - name: install Tobii.StreamEngine.Native
+      run: cd opentrack-depends && nuget install Tobii.StreamEngine.Native -Version 2.2.2.363 -OutputDirectory ${{github.workspace}}\nuget\
+      if: matrix.os == 'windows-latest'
+
+    - name: Install Linux Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libprocps-dev libopencv-dev libopencv-dev wine64-tools
+        sudo apt-get install qttools5-dev qtbase5-dev libqt5serialport5-dev qtbase5-private-dev
+        sudo apt-get install ninja-build
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Install Mac Dependencies
+      run: |
+        brew install ninja
+      if: matrix.os == 'macos-latest'
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        archives: qtbase qtimageformats qtgamepad qttools qtserialport qtmultimedia
+      if: matrix.os != 'ubuntu-latest'
+
+    - name: set envvar for windows for Tobii Location, and store it as a variable for use in other steps
+      run: echo "_TOBII_SDK_PATH=${{github.workspace}}\Tobii.StreamEngine.Native.2.2.2.363/build" >> "$GITHUB_ENV"
+      if: matrix.os == 'windows-latest'
+
+    - name: Configure
+      run: ${{matrix.cmake}} -GNinja -S ${{github.workspace}}/ -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DQt5_DIR=${{env.Qt5_DIR}} -DQt5Gui_DIR=${{env.Qt5_DIR}}/lib/cmake/Qt5Gui
+      if: matrix.os != 'windows-latest'
+
+    - name: Configure Windows
+      run: ${{matrix.cmake}} -GNinja -S ${{github.workspace}}/ -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DQt5_DIR=${{env.Qt5_DIR}} -DQt5Gui_DIR=${{env.Qt5_DIR}}/lib/cmake/Qt5Gui -DSDK_TOBII=${{github.workspace}}\nuget\Tobii.StreamEngine.Native.2.2.2.363\build\native
+      if: matrix.os == 'windows-latest'
+
+    - name: Check Tobii SDK
+      run: |
+        ls ${{github.workspace}}\nuget\
+      if: matrix.os == 'windows-latest'
+
+    - name: Build
+      run: ${{matrix.cmake}} --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
+
+    - name: Create linux and mac tarball
+      run: |
+        cd ${{github.workspace}}/build/install
+        tar -czf opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz .
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+
+    - name: Create windows zip file
+      run: |
+        cd ${{github.workspace}}/build/install
+        7z a -tzip opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip .
+      if: matrix.os == 'windows-latest'
+
+    - name: upload linux or mac artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.tar.gz
+        asset_content_type: application/gzip
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+
+    - name: upload windows artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
+        asset_content_type: application/zip
+      if: matrix.os == 'windows-latest'
