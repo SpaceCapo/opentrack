@@ -1,4 +1,4 @@
-name: CMake
+name: Pull-Request-Builder
 
 on:
   - pull_request
