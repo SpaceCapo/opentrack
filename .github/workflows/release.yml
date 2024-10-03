@@ -1,4 +1,4 @@
-name: CMake
+name: Release-Artifact-Build-and-Publish
 
 on:
   release:
