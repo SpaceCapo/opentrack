@@ -107,7 +107,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
     
     - name: remove 'latest' from matrix.os for windows
-      run: echo "RELEASE_OS_NAME=${{ matrix.os }}" | ForEach-Object { $_.split("-")[0] }>> "$GITHUB_ENV"
+      run: echo "RELEASE_OS_NAME=${{ matrix.os }}" | ForEach-Object { $_.split("-")[0] } >> $env:GITHUB_ENV
       if: matrix.os == 'windows-latest'
 
     - name: upload linux or mac artifact
