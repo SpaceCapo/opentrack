@@ -119,6 +119,6 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ${{github.workspace}}/build/install/opentrack-spacecapo-${{ matrix.os }}-${{ env.BUILD_TYPE }}.zip
-        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ github.event.release.tag_name }}.tar.gz
+        asset_name: opentrack-spacecapo-${{ matrix.os }}-${{ github.event.release.tag_name }}.zip
         asset_content_type: application/zip
       if: matrix.os == 'windows-latest'
